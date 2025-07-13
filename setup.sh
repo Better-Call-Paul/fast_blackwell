@@ -9,6 +9,7 @@ if [ -d /workspace ]; then
 else
   DEV_DIR=~/devlibs
 fi
+
 mkdir -p "$DEV_DIR"
 cd "$DEV_DIR"
 
@@ -34,15 +35,6 @@ apt-get install -y cmake git
 
 if [ ! -d FlameGraph ]; then
   git clone https://github.com/brendangregg/FlameGraph.git
-fi
-
-if [ ! -d nvbench ]; then
-  git clone https://github.com/NVIDIA/nvbench.git
-  cd nvbench
-  mkdir -p build && cd build
-  cmake -DNVBench_ENABLE_EXAMPLES=ON -DCMAKE_BUILD_TYPE=Release ..
-  make -j4
-  cd "$DEV_DIR"
 fi
 
 apt-get clean
