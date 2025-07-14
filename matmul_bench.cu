@@ -121,7 +121,7 @@ int main()
   cudaCheck(cudaMemcpy(dA, A, sizeof(__nv_bfloat16) * M * K, cudaMemcpyHostToDevice));
   cudaCheck(cudaMemcpy(dB, B, sizeof(__nv_bfloat16) * K * N, cudaMemcpyHostToDevice));
 
-  int repeat_count = 50;
+  int repeat_count = 5;
   bool run_verification = true;
 
   for ( int kernel_num : {0, 1})
@@ -184,6 +184,7 @@ int main()
     for (int j = 0; j < repeat_count; ++j)
     {
       // run kernel
+      
     }
     
     cudaEventRecord(stop);
