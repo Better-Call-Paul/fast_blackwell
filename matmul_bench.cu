@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/time.h>
-#include <unistd.h>
 #include <ctime>
 #include <iostream>
 #include <vector>
@@ -14,6 +13,9 @@
 #include <cuda_bf16.h>
 #include <cassert>
 #include <unistd.h>
+#include <cmath>
+
+#include "cuda_common.cuh"
 
 #define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
 
@@ -37,7 +39,7 @@ __global__ void warmupKernel()
 
 std::default_random_engine generator(69);
 int yo = 0;
-void randomize_matrix(bf16 *mat, int N) 
+void randomize_matrix(__nv_bfloat16 *mat, int N) 
 {
   std::normal_distribution<float> distribution(0, 1);
   for (int i = 0; i < N; i++) 
@@ -47,7 +49,7 @@ void randomize_matrix(bf16 *mat, int N)
   ++yo;
 }
 
-bool verify_matrix(bf16 *matRef, bf16 *matOut, int N) 
+bool verify_matrix(__nv_bfloat16 *matRef, __nv_bfloat16 *matOut, int N) 
 {
   double diff = 0.0;
   int i;
@@ -55,7 +57,7 @@ bool verify_matrix(bf16 *matRef, bf16 *matOut, int N)
   {
     int r = i / 8192, c = i % 8192;
     int it = c*8192+r;
-    diff = std::fabs(__bfloat162float(matRef[i] - matOut[i]));
+    diff = std::fabs(__bfloat162float(matRef[i]) - __bfloat162float(matOut[i]));
     if (diff > 0.1) 
     {
       printf("Divergence! Should %5.2f, Is %5.2f (Diff %5.2f) at %d\n",
@@ -67,7 +69,7 @@ bool verify_matrix(bf16 *matRef, bf16 *matOut, int N)
 }
 
 cublasHandle_t cublas_handle;
-void runCublasGemmBF16(int M, int N, int K, bf16 *A, bf16 *B, bf16 *C)
+void runCublasGemmBF16(int M, int N, int K, __nv_bfloat16 *A, __nv_bfloat16 *B, __nv_bfloat16 *C)
 {
   float alpha = 1, beta = 0;
   // C(column major) = A(row major) * B(column major)
@@ -92,8 +94,8 @@ int main()
   cudaEventCreate(&stop);
 
   int max_size = 8192;
-  int M = N = K = max_size;
-
+  int M, N, K;
+  M = N = K = max_size;
 
   __nv_bfloat16 *A = nullptr, *B = nullptr, *C = nullptr, *C_ref = nullptr;
   __nv_bfloat16 *dA = nullptr, *dB = nullptr, *dC = nullptr, *dC_ref = nullptr;
@@ -105,7 +107,7 @@ int main()
   C_ref = (__nv_bfloat16 *)malloc(sizeof(__nv_bfloat16) * M * N);
 
   device_buffer = (int *)malloc(sizeof(int) * max_size * 128);
-  cudaCheck(cudaMalloc((void **)&device_buffer, sizeof(int) * max_size * 128));
+  cudaCheck(cudaMalloc((void**)&d_device_buffer, sizeof(int) * max_size * 128));
 
   randomize_matrix(A, M * K);
   randomize_matrix(B, K * N);
@@ -122,10 +124,10 @@ int main()
   int repeat_count = 50;
   bool run_verification = true;
 
-  for ( int kernel_number : {0, 1})
+  for ( int kernel_num : {0, 1})
   {
     sleep(5);
-    std::cout << "KERNEL: " << kernel_number << "\n";
+    std::cout << "KERNEL: " << kernel_num << "\n";
 
     if (run_verification)
     {
@@ -194,7 +196,7 @@ int main()
     printf(
         "Average elapsed time: (%7.6f) s, performance: (%7.1f) TFLOPS. size: (%ld).\n\n",
         elapsed_time / 1000.0 / repeat_count,
-        (repeat_count * FLOPS * 1e-9) / elapsed_time, m);
+        (repeat_count * FLOPS * 1e-9) / elapsed_time, M);
   }
 
   free(A);
