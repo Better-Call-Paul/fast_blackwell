@@ -14,6 +14,7 @@
 #include <cassert>
 #include <unistd.h>
 #include <cmath>
+#include "kernel_runners.cuh"
 
 #include "cuda_common.cuh"
 
@@ -122,9 +123,9 @@ int main()
   cudaCheck(cudaMemcpy(dB, B, sizeof(__nv_bfloat16) * K * N, cudaMemcpyHostToDevice));
 
   int repeat_count = 5;
-  bool run_verification = true;
+  bool run_verification = false;
 
-  for ( int kernel_num : {0, 1})
+  for ( int kernel_num : {0, 1, 2, 3, 4, 5})
   {
     sleep(5);
     std::cout << "KERNEL: " << kernel_num << "\n";
@@ -179,25 +180,32 @@ int main()
     
     }
 
-    cudaEventRecord(start);
+    cublasSetMathMode(cublas_handle, CUBLAS_TENSOR_OP_MATH);
+    // dummy launch
+    runCublasGemmBF16(M, N, K, dA, dB, dC_ref);
+
+    cublasSetStream(cublas_handle, 0);
+    cudaEventRecord(start, 0);
 
     for (int j = 0; j < repeat_count; ++j)
     {
-      // run kernel
-      
+        runCublasGemmBF16(M, N, K, dA, dB, dC_ref);
     }
-    
-    cudaEventRecord(stop);
-    cudaEventSynchronize(start);
+    cudaDeviceSynchronize();
+
+    cudaEventRecord(stop, 0);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&elapsed_time, start, stop);
 
     long FLOPS = (2LL * M) * (N * K);
 
     printf(
-        "Average elapsed time: (%7.6f) s, performance: (%7.1f) TFLOPS. size: (%ld).\n\n",
-        elapsed_time / 1000.0 / repeat_count,
-        (repeat_count * FLOPS * 1e-9) / elapsed_time, M);
+        "Average elapsed time: (%7.6f) s, performance: (%9.3f) PFLOPS. size: (%ld).\n\n",
+        elapsed_time * 1e-3 / repeat_count,
+        (repeat_count * FLOPS * 1e-12) / elapsed_time,
+        M
+    );
+        
   }
 
   free(A);
