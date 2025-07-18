@@ -2,8 +2,6 @@
 
 #include "kernels.cuh"
 
-
-
 void run_kernel_1(int M, int N, int K, __nv_bfloat16 *A, __nv_bfloat16 *B, float *C)
 {
     int warps_per_block = 4;

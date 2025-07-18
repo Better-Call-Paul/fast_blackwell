@@ -2,10 +2,6 @@
 
 #include "../cuda_common.cuh"
 
-using barrier = cuda::barrier<cuda::thread_scope_block>;
-namespace cde = cuda::device::experimental;
-using bf16 = __nv_bfloat16;
-
 constexpr int WARP_SIZE = 32;
 
 __global__ void kernel_1(int M, int N, int K, const bf16 *A, const bf16 *B, float *C)
@@ -38,14 +34,14 @@ __global__ void kernel_1(int M, int N, int K, const bf16 *A, const bf16 *B, floa
 
         asm volatile 
         (
-            "mma.sync.aligned.m16n8k32.row.col.kind::mxf8f6f4.block_scale.f32.e4m3.e4m3.f32.ue8m0 "
+            "tcgen05.mma.cta_group.kind::f16.cta_group::1 "
             "{%0, %1, %2, %3},"
             "{%4, %5, %6, %7},"
             "{%8, %9},"
             "{%0, %1, %2, %3};"
-            : "+r"(c0), "+r"(1), "+r"(c2), "+r"(c3)
+            : "+r"(c0), "+r"(c1), "+r"(c2), "+r"(c3)
             : "r"(a0), "r"(a1), "r"(a2), "r"(a3),
-              "r"(b0), "r"(b1),
+              "r"(b0), "r"(b1)
         );
 
         A += WARP_SIZE;

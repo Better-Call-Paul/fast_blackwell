@@ -14,23 +14,9 @@
 #include <cassert>
 #include <unistd.h>
 #include <cmath>
+
 #include "kernel_runners.cuh"
-
-#include "cuda_common.cuh"
-
-#define CEIL_DIV(M, N) (((M) + (N) - 1) / (N))
-
-void cudaCheck(cudaError_t error, const char *file, int line)
-{
-    if (error != cudaSuccess)
-    {
-        printf("[CUDA ERROR] at file %s:%d:\n%s\n", file, line,
-           cudaGetErrorString(error));
-        exit(1);
-    }
-}
-
-#define cudaCheck(err) (cudaCheck(err, __FILE__, __LINE__))
+#
 
 __global__ void warmupKernel()
 {
@@ -67,6 +53,12 @@ bool verify_matrix(__nv_bfloat16 *matRef, __nv_bfloat16 *matOut, int N)
     }
   }
   return true;
+}
+
+void run_kernel(int kernel_num, int M, int N, int K, __nv_bfloat16 *A, __nv_bfloat16 *B, __nv_bfloat16 *C, int *DB = nullptr)
+{
+  
+  
 }
 
 cublasHandle_t cublas_handle;
@@ -125,7 +117,7 @@ int main()
   int repeat_count = 5;
   bool run_verification = false;
 
-  for ( int kernel_num : {0, 1, 2, 3, 4, 5})
+  for ( int kernel_num : {0, 1})
   {
     sleep(5);
     std::cout << "KERNEL: " << kernel_num << "\n";
@@ -141,7 +133,7 @@ int main()
 
       runCublasGemmBF16(M, N, K, dA, dB, dC_ref);
 
-      // run_kernel(kernel_num, M, N, K, dA, dB, dC);
+      run_kernel(kernel_num, M, N, K, dA, dB, dC);
 
       cudaCheck(cudaDeviceSynchronize());
       cudaCheck(cudaGetLastError());
