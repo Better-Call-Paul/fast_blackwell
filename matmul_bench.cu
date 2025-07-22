@@ -16,7 +16,6 @@
 #include <cmath>
 
 #include "kernel_runners.cuh"
-#
 
 __global__ void warmupKernel()
 {
@@ -181,7 +180,8 @@ int main()
 
     for (int j = 0; j < repeat_count; ++j)
     {
-        runCublasGemmBF16(M, N, K, dA, dB, dC_ref);
+        //runCublasGemmBF16(M, N, K, dA, dB, dC_ref);
+        basic_tcgen05_mma_kernel<<<1, 1>>>();
     }
     cudaDeviceSynchronize();
 

@@ -33,18 +33,37 @@ void cudaCheck(cudaError_t error, const char *file, int line)
 
 __device__ static __forceinline__ uint64_t matrix_descriptor_encode(uint64_t x) 
 {
-    return (x >> 4) & 0x3FFFF;
+    return (x & 0x3FFFF) >> 4;
 }
 
-__device__ static inline uint64_t make_smem_desc(bf16* ptr, int ld)
+__device__ static __forceinline__ uint64_t make_shared_memory_descriptor(void*      ptr,
+                                              uint32_t   ld_bytes,
+                                              uint32_t   stride_bytes,
+                                              bool       ld_address_mode,
+                                              uint8_t    base_offset,
+                                              uint8_t    swizzle_mode)
 {
-    uint32_t address = static_cast<uint32_t>(__cvta_generic_to_shared(ptr));
-    uint64_t description = 0ull;
+    uint64_t p    = reinterpret_cast<uint64_t>(ptr);
+    uint64_t d0   = matrix_descriptor_encode(p);
+    uint64_t d1   = matrix_descriptor_encode(ld_bytes);
+    uint64_t d2   = matrix_descriptor_encode(stride_bytes);
+    uint64_t desc = 0;
+    desc |= d0;
+    desc |= d1       << 16;
+    desc |= d2       << 32;
+    desc |= uint64_t(1)       << 46;
+    desc |= uint64_t(base_offset & 0x7) << 49;
+    desc |= uint64_t(ld_address_mode)   << 52;
+    desc |= uint64_t(0xB0)    << 53;
+    desc |= uint64_t(swizzle_mode & 0x7) << 61;
+    return desc;
+}
 
-    description |= matrix_descriptor_encode(address);
-    description |= matrix_descriptor_encode(ld) << 16;
-    description |= matrix_descriptor_encode(16) << 32;
-    description |= 1ull << 62;
-
-    return description;
+__device__ inline uint64_t make_smem_desc(const __nv_bfloat16* ptr, int ld)
+{
+    uint32_t addr = static_cast<uint32_t>(__cvta_generic_to_shared(ptr));
+    uint64_t d0   = ((addr >> 4) & 0x3FFFFull);
+    uint64_t d1   = (((ld   >> 4) & 0x3FFFFull) << 16);
+    uint64_t d2   = (((16   >> 4) & 0x3FFFFull) << 32);
+    return d0 | d1 | d2 | (1ull<<62);
 }
