@@ -111,3 +111,11 @@ __device__ static inline void a_tensor_b_shmem(uint32_t d_tt_addr, uint32_t a_tt
         }
     }
 }
+
+template<>
+__device__ static inline void mma()
+{
+
+}
+
+template<>

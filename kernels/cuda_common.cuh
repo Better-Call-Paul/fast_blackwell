@@ -23,13 +23,32 @@ void cudaCheck(cudaError_t error, const char *file, int line)
 {
     if (error != cudaSuccess)
     {
-        printf("[CUDA ERROR] at file %s:%d:\n%s\n", file, line,
+        fprintf(stderr, "[CUDA ERROR] at file %s:%d:\n%s\n", file, line,
            cudaGetErrorString(error));
         exit(1);
     }
 }
 
 #define cudaCheck(err) (cudaCheck(err, __FILE__, __LINE__))
+
+inline void cudaKernelCheck(const char *file, int line)
+{
+    cudaError_t err = cudaGetLastError();
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "[KERNEL LAUNCH ERROR] %s:%d: %s\n", file, line, cudaGetErrorString(err));
+        exit(1);
+    }
+
+    err = cudaDeviceSynchronize();
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "[KERNEL RUNTIME ERROR] %s:%d: %s\n", file, line, cudaGetErrorString(err));
+        exit(1);
+    }
+}
+
+#define cudaKernelCheck(err) (cudaKernelCheck(err, __FILE__, __LINE__))
 
 __device__ static __forceinline__ uint64_t matrix_descriptor_encode(uint64_t x) 
 {
